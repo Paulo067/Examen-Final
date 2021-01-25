@@ -1,0 +1,79 @@
+#Param
+lam<-5
+r<-0.2
+a<-1.5
+
+
+x<-seq(0,150)
+FS<-1-(r*3)*(5/(5+x))^a
+
+FS[1]
+FS[21]
+FS[101]
+
+
+#FS'
+
+x_prime<-x/3
+FS_p<-1-r*(5/(5+x_prime))^a
+
+FS_p[1]
+FS_p[21]
+FS_p[101]
+
+
+plot(x,FS,col="blue",type="l" ,lty=1, lwd=2,main="Fonction de répartition de S et S'",ylab = "F(x)",xlab ="x",xlim=c(0,120))
+lines(x,FS_p,col="red",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S^-1",ylab = "TVaR(kappa)",xlab ="kappa")
+legend(80,0.8, legend=c("F(S)","F(S')"),lty=c(1,1), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","red"))
+
+#Stop Loss
+
+#Pour S
+d<-0:120
+PIS<-(1.2*5^(1.5)/sqrt(d+5))
+PIS[1]
+PIS[21]
+PIS[101]
+
+#Pour S'
+d_prime<-(0:120)/3
+PIS_p<-(1.2*5^(1.5)/sqrt(d_prime+5))
+PIS_p[1]
+PIS_p[21]
+PIS_p[101]
+
+plot(d,PIN,col="blue",type="l" ,lty=1, lwd=2,main="Stop-Loss de S et S'",ylab = "Pi(d)",xlab ="d",xlim=c(0,120))
+lines(d,PIN_p,col="red",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S^-1",ylab = "TVaR(kappa)",xlab ="kappa")
+legend(80,5, legend=c("pi(S)","pi(S')"),lty=c(1,1), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","red"))
+
+
+#Value at Risk de S
+kappa<-seq(0,0.995,0.001)
+VaRS<-5*exp(-(1/1.5)*log((1-kappa)/0.6))-5
+plot(kappa,VaRS,col="blue",type="l" ,lty=1, lwd=2,main="Value at Risk de S",ylab = "VaR(kappa)",xlab ="kappa")
+
+
+PIVARS<-(1.2*5^(1.5)/sqrt(VaRS+5))
+
+
+TVARS<-NULL
+for (i in 1:length(VaRS)){
+TVARS[i]<-PIVARS[i]/(1-kappa[i])+VaRS[i]}
+
+plot(kappa,TVARS,col="blue",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S",ylab = "TVaR(kappa)",xlab ="kappa")
+abline(h=6,col="green",type="l" ,lty=2, lwd=2,main="Tail Value at Risk de S",ylab = "TVaR(kappa)",xlab ="kappa")
+
+#Value at Risk de S'
+kappa<-seq(0,0.995,0.001)
+VaRS_p1<-3*(5*exp(-(1/1.5)*log((1-kappa)/0.2))-5)
+VaRS_p<-c(rep(0,800),VaRS_p1[801:996])
+plot(kappa,VaRS_p,col="blue",type="l" ,lty=1, lwd=2,main="Value at Risk de S'",ylab = "VaR(kappa)",xlab ="kappa",xlim=c(0.6,1),ylim=c(0,170)) 
+
+PIVARS_p<-(1.2*5^(1.5)/sqrt(VaRS_p+5))
+
+
+TVARS_p<-NULL
+for (i in 1:length(VaRS_p)){
+  TVARS_p[i]<-(PIVARS_p[i]/(1-kappa[i]))+VaRS_p[i]}
+plot(kappa,TVARS_p,col="blue",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S'",ylab = "TVaR(kappa)",xlab ="kappa")
+abline(h=6,col="green",type="l" ,lty=2, lwd=2,main="Tail Value at Risk de S",ylab = "TVaR(kappa)",xlab ="kappa")
