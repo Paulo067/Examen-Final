@@ -1,0 +1,34 @@
+
+
+
+#Pour theta = -1
+set.seed(2021)
+m <- 1000
+theta <- (-1)
+V <- matrix(runif(2*m),m,byrow = T)
+U1 <- V[,1]
+W1 <- theta * (2 * U1 - 1) - 1
+W2 <- (1 - theta * (2 * U1 - 1))^2 + 4 * theta * V[,2] * (2 * U1 - 1)
+U2 <- 2 * V[,2] / (sqrt(W2) - W1)
+
+U1[1:5]
+U2[1:5]
+
+plot(U1,U2,pch = 20,main="Réalisations de U1 et U2")
+
+
+#Pour theta = 1
+set.seed(2021)
+m<-1000
+theta<-(1)
+V<-matrix(runif(2*m),m,byrow = T)
+U1<-V[,1]
+W1<-theta*(2*U1-1)-1
+W2<-(1-theta*(2*U1-1))^2+4*theta*V[,2]*(2*U1-1)
+U2<-2*V[,2]/(sqrt(W2)-W1)
+
+U1[1:5]
+U2[1:5]
+
+plot(U1,U2,pch = 20,main="Réalisations de U1 et U2")
+
