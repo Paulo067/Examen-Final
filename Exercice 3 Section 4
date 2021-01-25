@@ -1,0 +1,202 @@
+#Section 4 Exercice 3
+
+#paramètres
+lam1<-3
+lam2<-4
+theta<-1
+d<-10
+
+#Calcul de mu(k)
+k<-c(0:1000)
+
+#calcul des fgp de f et f^2
+f1<-ppois(k,lam1)-ppois(k-1,lam1)
+f2<-ppois(k,lam2)-ppois(k-1,lam2)
+f1_c<-ppois(k,lam1)^2-ppois(k-1,lam1)^2
+f2_c<-ppois(k,lam2)^2-ppois(k-1,lam2)^2
+
+
+#calcul des mu
+muf1<-sum(k*f1)
+muf1_c<-sum(k*f1_c)
+muf2<-sum(k*f2)
+muf2_c<-sum(k*f2_c)
+
+c(muf1,muf1_c,muf2,muf2_c)
+
+
+#Correlation de pearson
+covX1X2_p<-theta*(sum(k*f1)-sum(k*f1_c))*(sum(k*f2)-sum(k*f2_c))
+covX1X2_n<-(-theta)*(sum(k*f1)-sum(k*f1_c))*(sum(k*f2)-sum(k*f2_c))
+
+varX1<-sum(k^2*f1)-sum(k*f1)^2
+varX2<-sum(k^2*f2)-sum(k*f2)^2
+c(varX1,varX2)
+
+corrX1X2_p<-covX1X2_p/(sqrt(varX1*varX2))
+corrX1X2_n<-covX1X2_n/(sqrt(varX1*varX2))
+round(c(corrX1X2_p,corrX1X2_n),digits = 2)
+
+#Les stop loss
+
+#Produit de convolution / fonction
+directconvo<-function(ff1,ff2)
+{
+  l1<-length(ff1)
+  l2<-length(ff2)
+  ffs<-ff1[1]*ff2[1]
+  smax<-l1+l2-2
+  ff1<-c(ff1,rep(0,smax-l1+1))
+  ff2<-c(ff2,rep(0,smax-l2+1))
+  for (i in 1 :smax)
+  {
+    j<-i+1
+    ffs<-c(ffs,sum(ff1[1 :j]*ff2[j :1]))
+  }
+  return(ffs)
+}
+
+
+#execution des convolutions
+convo1<-directconvo(f1,f2)
+convo2<-directconvo(f1_c,f2)
+convo3<-directconvo(f1,f2_c)
+convo4<-directconvo(f1_c,f2_c)
+
+
+#calcul des stop-loss avec d=10
+pi1<-sum(sapply(k-d,max,0)*convo1[1:1001])
+pi2<-sum(sapply(k-d,max,0)*convo2[1:1001])
+pi3<-sum(sapply(k-d,max,0)*convo3[1:1001])
+pi4<-sum(sapply(k-d,max,0)*convo4[1:1001])
+
+
+piS_pos<-pi1+theta*pi1+theta*pi4-theta*pi3-theta*pi2
+piS_neg<-pi1-theta*pi1-theta*pi4+theta*pi3+theta*pi2
+
+c(piS_pos,piS_neg)
+
+#Pour S 
+#THETA positive =1
+fs_p<-convo1+theta*convo1+theta*convo4-theta*convo3-theta*convo2
+FS_p<-cumsum(fs_p)
+
+plot(0:2000,FS_p,col="blue",type="l" ,lty=1, lwd=2,main="Fonction de réparitition de S^1",ylab = "F(x)",xlab ="x",xlim=c(0,20))
+
+#esperance / variance /ecart type
+ES<-sum(k*fs_p[1:1001])
+varS_p<-sum(k^2*fs_p[1:1001])-sum(k*fs_p[1:1001])^2
+ECS_p<-sqrt(varS_p)
+
+#calcul VaR / function
+kappa<-c(0.5,0.9,0.99,0.999)
+
+VaR<-function(kappa) {
+  sum(FS_p<kappa) }
+
+VaRS_p<-sapply(kappa, function(kappa) VaR(kappa))
+
+
+#Calcul TVAR par stop-loss
+TVARS1<-(1/(1-kappa[1]))*sum(sapply(k-VaRS_p[1],max,0)*fs_p[1:1001])+VaRS_p[1]
+TVARS2<-(1/(1-kappa[2]))*sum(sapply(k-VaRS_p[2],max,0)*fs_p[1:1001])+VaRS_p[2]
+TVARS3<-(1/(1-kappa[3]))*sum(sapply(k-VaRS_p[3],max,0)*fs_p[1:1001])+VaRS_p[3]
+TVARS4<-(1/(1-kappa[4]))*sum(sapply(k-VaRS_p[4],max,0)*fs_p[1:1001])+VaRS_p[4]
+
+c(TVARS1,TVARS2,TVARS3,TVARS4)
+
+#verification
+TVARS0<-(1/(1-0))*sum(sapply(k-VaR(0),max,0)*fs_p[1:1001])+VaR(0)
+TVARS0
+
+#pour graphique
+kap<-seq(0,0.999,0.001)
+
+#Graphique VAR
+VaRS_p_graph<-sapply(kappa2, function(kappa2) VaR_n(kappa2))
+plot(kappa2,VaRS_n_graph,col="blue",type="l" ,lty=1, lwd=2,main="Value at Risk de S^1",ylab = "VaR(kappa)",xlab ="kappa")
+
+VaRS_p_graph<-sapply(kappa2, function(kappa2) VaR(kappa2))
+
+#graphique TVAR
+TVARS<-NULL
+for (i in 1:length(kap))
+{TVARS[i]<-(1/(1-kap[i]))*sum(sapply(k-VaRS_p_graph[i],max,0)*fs_p[1:1001])+VaRS_p_graph[i]}
+
+plot(kap,TVARS,col="blue",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S^1",ylab = "TVaR(kappa)",xlab ="kappa",ylim = c(6,20))
+abline(h=7,col="green",lty=2, lwd=2)
+legend(0.05,18, legend=c("TVAR","E(S)"),lty=c(1,2), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","green"))
+
+
+
+#THETA negatif = -1
+#fgp et fonction de repatition
+fs_n<-convo1-theta*convo1-theta*convo4+theta*convo3+theta*convo2
+FS_n<-cumsum(fs_n)
+
+plot(0:2000,FS_n,col="blue",type="l" ,lty=1, lwd=2,main="Fonction de répartition de S^-1",ylab = "F(x)",xlab ="x",xlim=c(0,20))
+
+#esperance, variance et ecart-type
+ES_n<-sum(k*fs_n[1:1001])
+varS_n<-sum(k^2*fs_n[1:1001])-sum(k*fs_n[1:1001])^2
+ECS_n<-sqrt(varS_n)
+varS_n
+
+#Calcul de la VAR
+kappa<-c(0.5,0.9,0.99,0.999)
+
+#fonction VAR
+VaR_n<-function(kappa) {
+  sum(FS_n<kappa) }
+
+
+VaRS_n<-sapply(kappa, function(kappa) VaR_n(kappa))
+
+#calcul de la TVAR
+TVARS1_n<-(1/(1-kappa[1]))*sum(sapply(k-VaRS_n[1],max,0)*fs_n[1:1001])+VaRS_n[1]
+TVARS2_n<-(1/(1-kappa[2]))*sum(sapply(k-VaRS_n[2],max,0)*fs_n[1:1001])+VaRS_n[2]
+TVARS3_n<-(1/(1-kappa[3]))*sum(sapply(k-VaRS_n[3],max,0)*fs_n[1:1001])+VaRS_n[3]
+TVARS4_n<-(1/(1-kappa[4]))*sum(sapply(k-VaRS_n[4],max,0)*fs_n[1:1001])+VaRS_n[4]
+
+c(TVARS1_n,TVARS2_n,TVARS3_n,TVARS4_n)
+
+#verification
+TVARS0_n<-(1/(1-0))*sum(sapply(k-VaR_n(0),max,0)*fs_n[1:1001])+VaR_n(0)
+TVARS0_n
+
+
+#Graphique 
+kap<-seq(0,0.999,0.001)
+kappa2<-kap
+
+#Graphique VAR
+VaRS_n_graph<-sapply(kappa2, function(kappa2) VaR_n(kappa2))
+plot(kappa2,VaRS_n_graph,col="blue",type="l" ,lty=1, lwd=2,main="Value at Risk de S^-1",ylab = "VaR(kappa)",xlab ="kappa")
+
+#Graphique TVAR
+TVARS_n<-NULL
+for (i in 1:length(kap))
+{TVARS_n[i]<-(1/(1-kap[i]))*sum(sapply(k-VaRS_n_graph[i],max,0)*fs_n[1:1001])+VaRS_n_graph[i]}
+
+plot(kap,TVARS_n,col="blue",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S^-1",ylab = "TVaR(kappa)",xlab ="kappa",ylim = c(6,18))
+abline(h=7,col="green",lty=2, lwd=2)
+legend(0.05,18, legend=c("TVAR","E(S)"),lty=c(1,2), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","green"))
+
+
+#Comparaison des fonctions de répartiton
+plot(0:2000,FS_p,col="blue",type="l" ,lty=1, lwd=2,main="Comparaison des Fonctions de répartition",ylab = "F(x)",xlab ="x",xlim=c(0,20))
+lines(FS_n,col="red",type="l" ,lty=1, lwd=2,main="Fonction de réparitition de S^1",ylab = "F(x)",xlab ="x",xlim=c(0,20))
+legend(0,1, legend=c("theta=1","theta=-1"),lty=c(1,1), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","red"))
+
+
+#Comparaison des VaR
+
+plot(kappa2,VaRS_p_graph,col="blue",type="l" ,lty=1, lwd=2,main="Comparaison des VaR",ylab = "VaR",xlab ="kappa")
+lines(kappa2,VaRS_n_graph,col="red",type="l" ,lty=1, lwd=2,main="Fonction de réparitition de S^1",ylab = "F(x)",xlab ="x")
+legend(0,15, legend=c("theta=1","theta=-1"),lty=c(1,1), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","red"))
+
+
+#comparaison TVAR
+plot(kappa2,TVARS,col="blue",type="l" ,lty=1, lwd=2,main="Comparaison des TVaR",ylab = "TVaR",xlab ="kappa")
+lines(kappa2,TVARS_n,col="red",type="l" ,lty=1, lwd=2,main="Fonction de réparitition de S^1",ylab = "F(x)",xlab ="x")
+legend(0,15, legend=c("theta=1","theta=-1"),lty=c(1,1), cex=1.1,bg='lightgrey',lwd=2:2,col=c("blue","red"))
