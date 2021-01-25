@@ -1,0 +1,215 @@
+#parametre
+
+lam1<-5
+lam2<-10
+
+upper<-matrix(0,nrow=101,ncol=101)
+a<-matrix(0,nrow=101,ncol=101)
+
+for (i in 0:100){
+  for(j in 0:100){
+    upper[i+1,j+1]<-min(ppois(i,lam1),ppois(j,lam2))
+    if( i != 0){
+      upper[i+1,j+1]<-upper[i+1,j+1]-min(ppois(i-1,lam1),ppois(j,lam2))
+    }
+    if(j != 0){
+      upper[i+1,j+1]<-upper[i+1,j+1]-min(ppois(i,lam1),ppois(j-1,lam2))
+    }
+    if(i !=0 && j!= 0){
+      upper[i+1,j+1]<-upper[i+1,j+1]+min(ppois(i-1,lam1),ppois(j-1,lam2))
+    }
+  }
+}
+
+#verif
+upper
+sum(upper)
+
+#esperance et variance
+EM1<-sum(rowSums(upper)*0:100)
+EM2<-sum(colSums(upper)*0:100)
+EN<-EM1+EM2
+
+varM1<-sum(rowSums(upper)*(0:100)^2)-EM1^2
+varM2<-sum(colSums(upper)*(0:100)^2)-EM2^2
+varN<-varM1+varM2
+
+
+
+
+#covariance
+arg<-matrix(0,nrow=101,ncol=101)
+for (i in 0:100){
+  for(j in 0:100){
+    arg[i+1,j+1]<-i*j
+  }
+}
+
+EM1M2_p<-sum(arg*upper)
+
+cov_p<-EM1M2_p-lam1*lam2
+
+varN<-varM1+varM2+2*cov_p
+
+
+#correlation
+corr_p<-cov_p/(sqrt(lam1*lam2))
+corr_p
+
+
+#Convolution 
+k<-1
+upper_S<-rep(0,101)
+for(k in 0:100){
+  s<- 0
+  for(j in 0:k){
+    s<-s+upper[j+1,k-j+1]
+  }
+  upper_S[k+1]<-s
+}
+
+#Densité
+fN_upper<-upper_S
+
+cbind(0:20,fN_upper[1:21])  #valeurs demandees
+
+varN_P<-sum((0:100)^2*fN_upper)-sum((0:100)*fN_upper)^2
+
+
+
+#Fonction de repartition
+FN_upper<-cumsum(fN_upper)
+
+cbind(0:20,FN_upper[1:21])  #valeurs demandees
+
+
+#verif esperance
+c(EN,sum(0:100*fN_upper))
+
+#VaR et TVAR
+#VAR TVAR upper
+kap<-c(0,0.5,0.9,0.99,0.999,0.9999)
+
+#fonction VaR
+VaR_upper<-function(kappa) {
+  sum(FN_upper<kappa) }
+
+VaRN_upper<-sapply(kap, function(kappa) VaR_upper(kappa))
+VaRN_upper
+
+#Boucle TVAR
+x<-c(0:100)
+TVARN_upper<-NULL
+for (i in 1:length(kap))
+{TVARN_upper[i]<-(1/(1-kap[i]))*sum(sapply(x-VaRN_upper[i],max,0)*fN_upper)+VaRN_upper[i]}
+TVARN_upper #Le premier kappa pour verif
+
+
+#-------------- LOWER ------------------------
+#parametre
+
+lam1<-5
+lam2<-10
+
+lower<-matrix(0,nrow=101,ncol=101)
+a<-matrix(0,nrow=101,ncol=101)
+
+for (i in 0:100){
+  for(j in 0:100){
+    lower[i+1,j+1]<-max(ppois(i,lam1)+ppois(j,lam2)-1,0)
+    if( i != 0){
+      lower[i+1,j+1]<-lower[i+1,j+1]-max(ppois(i-1,lam1)+ppois(j,lam2)-1,0)
+    }
+    if(j != 0){
+      lower[i+1,j+1]<-lower[i+1,j+1]-max(ppois(i,lam1)+ppois(j-1,lam2)-1,0)
+    }
+    if(i !=0 && j!= 0){
+      lower[i+1,j+1]<-lower[i+1,j+1]+max(ppois(i-1,lam1)+ppois(j-1,lam2)-1,0)
+    }
+  }
+}
+
+#verif
+round(lower,digits = 15)
+sum(lower)
+
+#Covariance et correlation
+EM1M2_n<-sum(arg*lower)
+
+cov_n<-EM1M2_n-lam1*lam2
+
+corr_n<-cov_n/(sqrt(lam1*lam2))
+
+
+#Convolution Lower
+k<-1
+lower_S<-rep(0,101)
+for(k in 0:100){
+  s<- 0
+  for(j in 0:k){
+    s<-s+lower[j+1,k-j+1]
+  }
+  lower_S[k+1]<-s
+}
+fN_lower<-lower_S
+
+cbind(0:20,fN_lower[1:21]) #valeurs demandees
+
+varN_n<-sum((0:100)^2*fN_lower)-sum((0:100)*fN_lower)^2
+
+#Fonction de repartition
+FN_lower<-cumsum(fN_lower)
+
+cbind(0:20,FN_lower[1:21])#valeurs demandees
+
+#VaR et TVAR
+kap<-c(0,0.5,0.9,0.99,0.999,0.9999)
+VaR_lower<-function(kappa) {
+  sum(FN_lower<kappa) }
+
+VaRN_lower<-sapply(kap, function(kappa) VaR_lower(kappa))
+
+#TVAR
+x<-c(0:100)
+TVARN_lower<-NULL
+for (i in 1:length(kap))
+{TVARN_lower[i]<-(1/(1-kap[i]))*sum(sapply(x-VaRN_lower[i],max,0)*fN_lower)+VaRN_lower[i]}
+TVARN_lower
+
+
+#Graphique
+kappa<-seq(0,0.9999,0.0001)
+
+VaR_upper<-function(kappa) {
+  sum(FN_upper<kappa) }
+
+VaRN_upper<-sapply(kappa, function(kappa) VaR_upper(kappa))
+
+
+VaR_lower<-function(kappa) {
+  sum(FN_lower<kappa) }
+
+VaRN_lower<-sapply(kappa, function(kappa) VaR_lower(kappa))
+
+plot(kappa,VaRN_upper,col="red",type="l" ,lty=1, lwd=2,main="Value at Risk de N et N'",ylab = "f(kappa)",xlab ="kappa")
+lines(kappa,VaRN_lower,col="blue",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S^1",ylab = "Encadrements",xlab ="kappa")
+legend(0,35, legend=c("VaR(N)","VaR(N')"),lty=c(1,1), cex=1.1,bg='lightgrey',lwd=2:2,col=c("red","blue","green","purple"))
+
+
+x<-c(0:100)
+TVARN_upper<-NULL
+for (i in 1:length(kappa))
+{TVARN_upper[i]<-(1/(1-kappa[i]))*sum(sapply(x-VaRN_upper[i],max,0)*fN_upper)+VaRN_upper[i]}
+TVARN_upper #Le premier kappa pour verif
+
+
+x<-c(0:100)
+TVARN_lower<-NULL
+for (i in 1:length(kappa))
+{TVARN_lower[i]<-(1/(1-kappa[i]))*sum(sapply(x-VaRN_lower[i],max,0)*fN_lower)+VaRN_lower[i]}
+TVARN_lower
+
+plot(kappa,TVARN_upper,col="red",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de N et N'",ylab = "f(kappa)",xlab ="kappa")
+lines(kappa,TVARN_lower,col="blue",type="l" ,lty=1, lwd=2,main="Tail Value at Risk de S^1",ylab = "Encadrements",xlab ="kappa")
+abline(h=15,col="green",lty=2, lwd=2)
+legend(0,35, legend=c("TVaR(N)","TVaR(N')","E(N)"),lty=c(1,1,2), cex=1.1,bg='lightgrey',lwd=2:2,col=c("red","blue","green","purple"))
