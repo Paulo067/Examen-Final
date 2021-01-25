@@ -1,0 +1,59 @@
+#parametre
+q = 0.4
+b = 1
+x <- seq(0,10)
+set.seed(2021)
+
+#FONCTION pour REPARTITION
+fonction.distrib <- function(x){
+  s <- dbinom(0,2,q)+dbinom(1,2,q)*pexp(x,b)+dbinom(2,2,q)*pexp(x/2,b)
+  return(s)
+}
+zeta <- rep(0,3)
+zeta[1] = pbinom(0,2,q)
+zeta[2] = dbinom(1,2,q)
+zeta[3] = dbinom(2,2,q)
+fonction.distrib2<-function(x){
+  return(zeta[1]+zeta[2]*pgamma(x,1,rate= b)+zeta[3]*pgamma(x,2,rate=b))
+}
+
+
+#GRAPHIQUE
+FS<-fonction.distrib2(x)
+plot(x,FS,col="blue",type="l" ,lty=1, lwd=2,main="Fonction de répartition de S'",ylab = "F(x)",xlab ="x")
+
+
+#Value at risk
+
+varS <- function(kappa){
+  if(kappa<=pbinom(0,2,q)){
+    return(0)
+  }
+  if(kappa<=pbinom(1,2,q)){
+    return(-log(1-kappa))
+  }
+  return(-2*log(1-kappa))
+}
+kappa <-seq(0,0.999,0.001)
+VaRS <- sapply(kappa,varS)
+plot(kappa,VaRS,col="blue",type="l" ,lty=1, lwd=2,main="Fonction de répartition de S'",ylab = "F(x)",xlab ="x")
+
+
+#Tail Value at Risk
+tvars<-function(kappa){
+  return(t(kappa)/(1-kappa))
+}
+t<- function(kappa){
+  if(kappa<=pbinom(0,2,q)){
+    return(-log(1-pbinom(0,2,q))-log(1-pbinom(1,2,q))+2*1/b)
+  }
+  if(kappa<=pbinom(1,2,q)){
+    return(-log(1-kappa)-log(1-pbinom(1,2,q))+2*1/b)
+  }
+  return(2*(-log(1-kappa)/b+1/b))
+}
+
+tvars2 <- function(kappa){
+  return((zeta[2]*(1/b)*(1-pgamma(varS(kappa),2,rate =b))+zeta[3]*(2/b)*(1-pgamma(varS(kappa),3,rate =b)))/(1-kappa))
+}
+TVaRS<- sapply(kappa,tvars)
